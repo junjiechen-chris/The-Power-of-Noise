@@ -5,9 +5,10 @@ from transformers import PreTrainedModel, AutoConfig, AutoModel, AutoTokenizer
 import numpy as np
 import torch
 import torch.nn.functional as F
+from torch.utils.data import Dataset, DataLoader, IterableDataset
 
 import normalize_text
-
+from datetime import datetime
 
 class Encoder(PreTrainedModel):
     """
@@ -22,7 +23,6 @@ class Encoder(PreTrainedModel):
         self.model = AutoModel.from_pretrained(
             config.name_or_path, config=self.config
         )
-
 
     def forward(
         self,
@@ -62,6 +62,7 @@ class Encoder(PreTrainedModel):
         return emb
 
 
+
 class Retriever:
     """
     A class for retrieving document embeddings using a specified encoder, using a bi-encoder approach.
@@ -91,7 +92,6 @@ class Retriever:
         self.lower_case = lower_case
         self.do_normalize_text = do_normalize_text
 
-
     def encode_queries(self, queries: List[str], batch_size: int) -> np.ndarray:
         if self.do_normalize_text:
             queries = [normalize_text.normalize(q) for q in queries]
@@ -120,56 +120,97 @@ class Retriever:
         all_embeddings = torch.cat(all_embeddings, dim=0)
         return all_embeddings
     
-
     def encode_corpus(
         self, 
-        corpus_info: List[Dict[str, str]], 
+        corpus_info, 
         batch_size: int, 
         output_dir: str, 
         prefix_name: str,
-        save_every: int = 500
+        save_every: int = 500,
+        num_workers: int = 4,
+        pin_memory: bool = True
     ) -> None:
+        """
+        Encode corpus using DataLoader for optimized batching and data loading.
+        
+        Args:
+            corpus_info: List of dictionaries containing 'title' and 'text' keys
+            batch_size: Number of documents to process in each batch
+            output_dir: Directory to save embeddings
+            prefix_name: Prefix for saved embedding files
+            save_every: Save embeddings every N batches
+            num_workers: Number of subprocesses for data loading
+            pin_memory: Whether to pin memory for faster GPU transfer
+        """
+        all_embeddings = []
+        num_batches_processed = 0
+        total_processed = 0
+        
+        def save_to_npy(all_embeddings, total_processed, batch_idx):
+             embeddings = torch.cat(all_embeddings, dim=0).cpu()
+             file_index = total_processed - 1  # Index of the last passage embedded
+             file_path = os.path.join(
+                                output_dir, f'{prefix_name}_{file_index}_embeddings.npy'
+                            )
+             np.save(file_path, embeddings.numpy())
+             print(f"Saved embeddings for {total_processed} passages (batch {batch_idx + 1}).")
+                            
+             
+        
+        
         os.makedirs(output_dir, exist_ok=True)
         
-        all_embeddings = []
-        num_steps = 0
+        # Create dataset and dataloader
+        dataset = corpus_info
+        
+        dataloader = DataLoader(
+            dataset,
+            batch_size=batch_size,
+            shuffle=False,  # Keep original order for consistent indexing
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+            drop_last=False  # Include the last batch even if incomplete
+        )
+        
 
-        nbatch = (len(corpus_info) - 1) // batch_size + 1
+        
+        self.doc_encoder.eval()  # Set to evaluation mode
+        
         with torch.no_grad():
-            for k in range(nbatch):
-                start_idx = k * batch_size
-                end_idx = min((k + 1) * batch_size, len(corpus_info))
-
-                corpus = [
-                    c["title"] + " " + c["text"] if len(c["title"]) > 0 else c["text"] 
-                    for c in corpus_info[start_idx: end_idx]
-                ]
-                if self.do_normalize_text:
-                    corpus = [normalize_text.normalize(c) for c in corpus]
-                if self.lower_case:
-                    corpus = [c.lower() for c in corpus]
-
+            for batch_idx, corpus_batch in enumerate(dataloader):
+                total_processed += len(corpus_batch["plain"])
+                # if batch_idx < 77500: continue
+                if batch_idx % 100 == 0:
+                    print(f"{datetime.now()} working on batch {batch_idx}", flush=True)
+                # Tokenize the batch
                 doc_inputs = self.tokenizer(
-                    corpus,
+                    corpus_batch["plain"],
                     max_length=self.max_length,
                     padding=True,
                     truncation=True,
                     add_special_tokens=self.add_special_tokens,
                     return_tensors="pt",
-                ).to(self.device)
+                )
+                
+                # Move to device if pin_memory is False
+                if not pin_memory:
+                    doc_inputs = doc_inputs.to(self.device)
+                else:
+                    doc_inputs = {k: v.to(self.device, non_blocking=True) for k, v in doc_inputs.items()}
 
+                # Encode the batch
                 emb = self.doc_encoder.encode(**doc_inputs, normalize=self.norm_doc_emb)
                 all_embeddings.append(emb)
-
-                num_steps += 1
-
-                if num_steps == save_every or k == nbatch - 1:
-                    embeddings = torch.cat(all_embeddings, dim=0)
-                    file_index = end_idx - 1  # Index of the last passage embedded in the batch
-                    file_path = os.path.join(
-                        output_dir, f'{prefix_name}_{file_index}_embeddings.npy'
-                    )
-                    np.save(file_path, embeddings.cpu().numpy())
-                    print(f"Saved embeddings for {file_index} passages.")
-                    num_steps = 0
+                
+                num_batches_processed += 1
+                
+                
+                # Save embeddings periodically or at the end
+                if num_batches_processed == save_every:
+                    save_to_npy(all_embeddings, total_processed, batch_idx)
+                    # Reset for next save cycle
                     all_embeddings = []
+                    num_batches_processed = 0
+            save_to_npy(all_embeddings, total_processed, batch_idx)
+                    
+                   

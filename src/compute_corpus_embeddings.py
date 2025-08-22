@@ -4,6 +4,7 @@ import warnings
 
 import torch
 from transformers import AutoTokenizer, AutoConfig
+from datasets import load_dataset, Features, Value
 
 from retriever import *
 from utils import *
@@ -13,6 +14,10 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 device = torch.device(f"cuda:0" if torch.cuda.is_available() else "cpu")
 warnings.filterwarnings('ignore')
 SEED=10
+# force TF32
+torch.backends.cuda.matmul.allow_tf32 = True
+torch.backends.cudnn.allow_tf32 = True
+features = Features({"text": Value("string"), "title": Value("string"),})
 
 
 def parse_arguments() -> argparse.Namespace:
@@ -50,11 +55,92 @@ def initialize_retriever(args: argparse.Namespace) -> Retriever:
     return retriever
 
 
+
+def read_json_streaming(file_path: str):
+    """Streaming version using ijson"""
+    with open(file_path, "rb") as reader:
+        # Assumes JSON structure is an array of objects: [{"title": "...", "text": "..."}, ...]
+        parser = ijson.parse(reader)
+        for item in ijson.items(reader, 'item'):
+            yield item
+
+def process_text(item: Dict[str, str], do_normalize_text, lower_case) -> str:
+    """Process individual item (same logic as original)"""
+    # Concatenate title and text
+    text = item["title"] + " " + item["text"] if len(item["title"]) > 0 else item["text"]
+    
+    # Apply text normalization if enabled
+    if do_normalize_text:
+        text = normalize_text.normalize(text)
+        
+    # Apply lowercasing if enabled
+    if lower_case:
+        text = text.lower()
+            
+    return {"plain": text}
+
+
+class CorpusDataset(IterableDataset):
+    """
+    Enhanced CorpusDataset that supports both in-memory list and streaming from file.
+    Minimal change from original - just pass file_path instead of corpus_info for streaming.
+    """
+    def __init__(
+        self, 
+        corpus_info,
+        lower_case: bool = False,
+        do_normalize_text: bool = False
+    ):
+        self.corpus_info = corpus_info
+        self.lower_case = lower_case
+        self.do_normalize_text = do_normalize_text
+        self.is_streaming = isinstance(corpus_info, str)  # If string, treat as file path
+        
+    def _process_item(self, item: Dict[str, str]) -> str:
+        """Process individual item (same logic as original)"""
+        # Concatenate title and text
+        text = item["title"] + " " + item["text"] if len(item["title"]) > 0 else item["text"]
+        
+        # Apply text normalization if enabled
+        if self.do_normalize_text:
+            text = normalize_text.normalize(text)
+        
+        # Apply lowercasing if enabled
+        if self.lower_case:
+            text = text.lower()
+            
+        return text
+    
+    def __iter__(self):
+        if self.is_streaming:
+            # Streaming mode: corpus_info is file path
+            with open(self.corpus_info, "rb") as reader:
+                # Parse JSON array items one by one
+                for item in ijson.items(reader, 'item'):
+                    yield self._process_item(item)
+        else:
+            # Original mode: corpus_info is list
+            for item in self.corpus_info:
+                yield self._process_item(item)
+    
+    def __len__(self):
+        if self.is_streaming:
+            # For streaming, we can't know length without reading entire file
+            # Return None or raise NotImplementedError
+            raise NotImplementedError("Length not available for streaming datasets")
+        else:
+            return len(self.corpus_info)
+
+
 def main():
     args = parse_arguments()
 
     print("Loading corpus...")
-    corpus = read_json(args.corpus_path)
+    # corpus = CorpusDataset(args.corpus_path, lower_case=args.lower_case, do_normalize_text=args.do_normalize_text)
+
+    corpus = load_dataset("json", data_files=args.corpus_path, split="train", streaming=True, features=features)
+    corpus = corpus.map(lambda x: process_text(x, lower_case=args.lower_case, do_normalize_text=args.do_normalize_text))
+    
     print("Corpus loaded")
 
     retriever = initialize_retriever(args)

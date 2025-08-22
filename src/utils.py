@@ -42,10 +42,18 @@ def write_pickle(data, file_path: str):
 
 
 def read_json(file_path: str):
-    with open(file_path, "rb") as reader:
-        data = json.load(reader)
-    return data
+    return read_json_streaming(file_path)
+    #with open(file_path, "rb") as reader:
+    #    data = json.load(reader)
+    #return data
 
+def read_json_streaming(file_path: str):
+    """Streaming version using ijson"""
+    with open(file_path, "rb") as reader:
+        # Assumes JSON structure is an array of objects: [{"title": "...", "text": "..."}, ...]
+        parser = ijson.parse(reader)
+        for item in ijson.items(reader, 'item'):
+            yield item
 
 def write_json(data, file_path: str):
     with open(file_path, "w") as writer:
