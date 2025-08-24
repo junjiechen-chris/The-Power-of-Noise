@@ -1,26 +1,19 @@
 [project]
 name = "the-power-of-noise"
 version = "0.1.0"
-description = ""
-authors = [
-    {name = "Your Name",email = "you@example.com"}
-]
+description = "Add your description here"
 readme = "README.md"
-requires-python = "==3.11.11"
+requires-python = ">=3.11"
 dependencies = [
-    "transformers (>=4.55.3,<5.0.0)",
-    "vllm (>=0.10.1.1,<0.11.0.0)",
-    "datasets (>=4.0.0,<5.0.0)",
-    "ijson (>=3.4.0,<4.0.0)",
-    "accelerate (>=1.10.0,<2.0.0)",
-    "einops (>=0.8.1,<0.9.0)",
-    "bitsandbytes (>=0.47.0,<0.48.0)",
-    "ipykernel (>=6.30.1,<7.0.0)"
+    "accelerate>=1.10.0",
+    "datasets>=4.0.0",
+    "einops>=0.8.1",
+    "faiss-gpu-cu12>=1.11.0",
+    "ijson>=3.4.0",
+    "pandas>=2.3.2",
+    "transformers>=4.55.4",
+    "vllm>=0.10.1.1",
 ]
 
-[tool.poetry]
-package-mode = false
-
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
+[tool.uv]
+package = false
