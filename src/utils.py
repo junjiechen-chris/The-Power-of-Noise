@@ -7,6 +7,7 @@ import random
 import argparse
 import numpy as np
 from typing import Dict, List, Optional, Tuple
+from datasets import load_dataset
 
 def seed_everything(seed=10):
     random.seed(seed)
@@ -93,7 +94,8 @@ def read_subset_corupus_with_map(
 ) -> Tuple[List[Dict], Dict[int, int]]:
     full_to_subset_idx_map = read_pickle(full_to_subset_path)
     subset_to_full_idx_map = read_pickle(subset_to_full_path)
-    corpus = read_corpus_json(corpus_path, subset_to_full_idx_map)
+    #corpus = read_corpus_json(corpus_path, subset_to_full_idx_map)
+    corpus = load_dataset('json', data_files = corpus_path, split='train')
     return corpus, full_to_subset_idx_map
 
 
@@ -122,7 +124,7 @@ def read_corpus_with_adore():
 def read_corpus_with_contriever():
     full_to_subset_path = "data/mappings/full_to_subset_contriever_at150_in_corpus.pkl"
     subset_to_full_path = "data/mappings/subset_to_full_contriever_at150_in_corpus.pkl"
-    corpus_path = "data/processed/corpus_with_contriever_at150.json"
+    corpus_path = "data/processed/contriever_IP_test_150_downsized.jsonl"
     return read_subset_corupus_with_map(
         full_to_subset_path,
         subset_to_full_path,
@@ -133,7 +135,7 @@ def read_corpus_with_contriever():
 def read_corpus_with_random_and_contriever():
     full_to_subset_path = "data/mappings/full_to_subset_random_contriever_in_corpus.pkl"
     subset_to_full_path = "data/mappings/subset_to_full_random_contriever_in_corpus.pkl"
-    corpus_path = "data/processed/corpus_with_random_contriever.json"
+    corpus_path = "data/processed/contriever_IP_test_150_downsized.jsonl"
     return read_subset_corupus_with_map(
         full_to_subset_path,
         subset_to_full_path,

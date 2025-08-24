@@ -148,6 +148,8 @@ class PromptDataset(Dataset):
         self.gold_position = gold_position
         self.randomize_gold_position = randomize_gold_position
         self.get_documents_without_answer = get_documents_without_answer
+        
+        self.flag_full_corpus = len(corpus)>10000000
     
         
         self._validate_initialization_parameters()

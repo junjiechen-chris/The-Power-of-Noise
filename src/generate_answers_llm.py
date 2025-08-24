@@ -11,6 +11,7 @@ from transformers import PreTrainedTokenizer
 from llm import LLM
 from utils import *
 from prompt_dataset import PromptDataset
+from datasets import load_dataset
 
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -19,10 +20,11 @@ warnings.filterwarnings('ignore')
 SEED=10
 
 info = {
-    "data_path": 'data/10k_train_dataset.json',
+    "data_path": 'data/test_dataset.json',
     "random_results_path": "data/10k_random_results_at60.pkl",
     "adore_search_results_path": "data/adore_search_results_at200.pkl",
-    "contriever_search_results_path": "data/contriever_search_results_at150.pkl",
+    #"contriever_search_results_path": "data/contriever_search_results_at150.pkl",
+    "contriever_search_results_path": "data/search_results/contriever_IP_test_search_results_at150.pkl",
 }
 
 
@@ -58,7 +60,8 @@ def load_corpus(
 ) -> Tuple[List[Dict], Optional[Dict[int, int]]]:
     # Load the corpus
     if args.load_full_corpus:
-        corpus = read_corpus_json('data/corpus.json')
+        # corpus = read_corpus_json('data/corpus.json')
+        corpus = load_dataset('json', data_files='data/corpus-widx.jsonl', split='train')
         return corpus, None
 
     if args.use_random:

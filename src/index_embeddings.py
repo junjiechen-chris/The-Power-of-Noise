@@ -49,13 +49,16 @@ def load_all_embeddings(args: argparse.Namespace) -> np.array:
         emb_path = f'{args.output_dir}/{args.prefix_name}_{i}_embeddings.npy'
         emb = np.load(emb_path, mmap_mode='c')
         all_embeddings.append(emb)
+        print(f"loaded {args.output_dir}/{args.prefix_name}_{i}_embeddings.npy")
 
     last_idx = args.corpus_size - 1
     last_emb_path = f'{args.output_dir}/{args.prefix_name}_{last_idx}_embeddings.npy'
     last_emb = np.load(last_emb_path, mmap_mode='c')
     all_embeddings.append(last_emb)
+    print("loaded all")
 
     embeddings = np.concatenate(all_embeddings, axis=0)
+    print("concatenated")
     np.save(all_embeddings_path, embeddings)
 
     return embeddings

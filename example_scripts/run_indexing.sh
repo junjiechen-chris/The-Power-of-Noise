@@ -10,8 +10,8 @@ python src/index_embeddings.py \
     --vector_sz 768 \
     --idx_type IP \
     --faiss_dir data/corpus/faiss/wiki_dec_2018/to_gpu \
-    --percentages_for_index_splitting 60 \
+    --percentages_for_index_splitting 50 \
     --output_dir data/corpus/embeddings/wiki_dec_2018 \
     --prefix_name contriever \
-    --batch_size 512 \
+    --batch_size 256 \
     --save_every 500

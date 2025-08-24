@@ -130,12 +130,12 @@ def search_documents(
 def save_search_results(
     args: argparse.Namespace,
     search_results: List[Tuple[List[str], List[float]]], 
-        
+    ):
+            
     """Save search results to a pickle file."""
     os.makedirs(args.output_dir, exist_ok=True)
     file_path = os.path.join(
-        args.output_dir, f'{args.prefix_name}_{args.idx_type}_{args.split}_search_results_at{args.top_docs}.pkl'
-    )
+        args.output_dir, f'{args.prefix_name}_{args.idx_type}_{args.split}_search_results_at{args.top_docs}.pkl')
     write_pickle(search_results, file_path)
 
 

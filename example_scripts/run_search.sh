@@ -10,8 +10,8 @@ python src/compute_search_results.py \
     --encoder_id facebook/contriever \
     --max_length_encoder 512 \
     --top_docs 150 \
-    --use_test True \
+    --use_test False \
     --output_dir data/search_results \
     --prefix_name contriever \
-    --batch_size 512 \
+    --batch_size 256 \
     --index_batch_size 8
