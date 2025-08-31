@@ -1,0 +1,5 @@
+# @package _global_
+corpus:
+  full_to_subset_path: "data/mappings/full_to_subset_test_random_bm25_in_corpus.pkl"
+  subset_to_full_path: "data/mappings/subset_to_full_test_random_bm25_in_corpus.pkl"
+  corpus_path: "data/processed/test_corpus_with_random_bm25.json"

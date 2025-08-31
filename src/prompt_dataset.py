@@ -8,6 +8,8 @@ from transformers import AutoTokenizer
 import normalize_text
 from normalize_answers import *
 
+import logging
+
 
 class QueryDataset(Dataset):
     """
@@ -148,8 +150,10 @@ class PromptDataset(Dataset):
         self.gold_position = gold_position
         self.randomize_gold_position = randomize_gold_position
         self.get_documents_without_answer = get_documents_without_answer
-        
-        self.flag_full_corpus = len(corpus)>10000000
+
+        self.logger = logging.getLogger(__name__)
+
+        # self.flag_full_corpus = len(corpus)>10000000
     
         
         self._validate_initialization_parameters()
@@ -222,13 +226,17 @@ class PromptDataset(Dataset):
             # Check if the prompt exceeds 'max_tokenized_length'
             tokens = self.tokenizer.tokenize(prompt)
             tokens_len = len(tokens)
+
+            # !TODO: This skips examples. Which should be avoided as far as possible.
             if tokens_len >= self.max_tokenized_length:
                 self.excluded_samples_ids.append((idx, example_id))
-                print("Skipping example {} due to prompt length.".format((idx, example_id)))
+                self.logger.info("Skipping example {} due to prompt length.".format((idx, example_id)))
                 continue  # Skip adding this example
 
             if len(formatted_documents) != self.num_documents_in_context:
-                print(f"Warning: Not enough documents for example {idx}.")
+                self.logger.warning(f"Not enough documents for example {idx}. Skipping...")
+                continue
+
 
             # If prompt is within limit, add to preprocessed data
             self.preprocessed_data.append((formatted_documents, list(document_indices)))
@@ -264,6 +272,7 @@ class PromptDataset(Dataset):
             - The first list contains the formatted documents.
             - The second list contains the indices of the included documents.
         """
+        # import pdb; pdb.set_trace()
         indices = self._get_indices(example_idx)
         updated_indices, gold_position = self._insert_gold_document_idx(
             indices, gold_document_idx
@@ -405,6 +414,7 @@ class PromptDataset(Dataset):
             documents_info: List[Dict] = []
             # 'indices' are from the full corpus, so we need to map them to the subset
             for i in map(int, indices):
+                # import pdb; pdb.set_trace()
                 documents_info.append(self.corpus[self.full_to_subset_idx_map[i]])
 
         answerless_documents = []

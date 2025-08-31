@@ -8,6 +8,7 @@ import argparse
 import numpy as np
 from typing import Dict, List, Optional, Tuple
 from datasets import load_dataset
+from omegaconf import DictConfig
 
 def seed_everything(seed=10):
     random.seed(seed)
@@ -99,7 +100,25 @@ def read_subset_corupus_with_map(
     return corpus, full_to_subset_idx_map
 
 
+def read_subset_corpus_with_config(config: DictConfig) -> Tuple[List[Dict], Dict[int, int]]:
+    """
+    Read corpus using Hydra configuration.
+    
+    Args:
+        config: Hydra DictConfig containing corpus paths
+        
+    Returns:
+        Tuple of corpus and full_to_subset_idx_map
+    """
+    return read_subset_corupus_with_map(
+        config.corpus.full_to_subset_path,
+        config.corpus.subset_to_full_path,
+        config.corpus.corpus_path
+    )
+
+
 def read_corpus_with_random():
+    raise Exception("dnsabled dataset loading path")
     full_to_subset_path = "data/mappings/full_to_subset_random_at60_in_corpus.pkl"
     subset_to_full_path = "data/mappings/subset_to_full_random_at60_in_corpus.pkl"
     corpus_path = "data/processed/corpus_with_random_at60.json"
@@ -111,6 +130,7 @@ def read_corpus_with_random():
 
 
 def read_corpus_with_adore():
+    raise Exception("dnsabled dataset loading path")
     full_to_subset_path = "data/mappings/full_to_subset_adore_at200_in_corpus.pkl"
     subset_to_full_path = "data/mappings/subset_to_full_adore_at200_in_corpus.pkl"
     corpus_path = "data/processed/corpus_with_adore_at200.json"
@@ -124,7 +144,7 @@ def read_corpus_with_adore():
 def read_corpus_with_contriever():
     full_to_subset_path = "data/mappings/full_to_subset_contriever_at150_in_corpus.pkl"
     subset_to_full_path = "data/mappings/subset_to_full_contriever_at150_in_corpus.pkl"
-    corpus_path = "data/processed/contriever_IP_test_150_downsized.jsonl"
+    corpus_path = "data/processed/contriever_IP_150_downsized.jsonl"
     return read_subset_corupus_with_map(
         full_to_subset_path,
         subset_to_full_path,
@@ -133,6 +153,7 @@ def read_corpus_with_contriever():
 
 
 def read_corpus_with_random_and_contriever():
+    raise Exception("dnsabled dataset loading path")
     full_to_subset_path = "data/mappings/full_to_subset_random_contriever_in_corpus.pkl"
     subset_to_full_path = "data/mappings/subset_to_full_random_contriever_in_corpus.pkl"
     corpus_path = "data/processed/contriever_IP_test_150_downsized.jsonl"
@@ -144,6 +165,7 @@ def read_corpus_with_random_and_contriever():
 
 
 def read_test_corpus_with_random_and_bm25():
+    raise Exception("dnsabled dataset loading path")
     full_to_subset_path = "data/mappings/full_to_subset_test_random_bm25_in_corpus.pkl"
     subset_to_full_path = "data/mappings/subset_to_full_test_random_bm25_in_corpus.pkl"
     corpus_path = "data/processed/test_corpus_with_random_bm25.json"
@@ -155,6 +177,7 @@ def read_test_corpus_with_random_and_bm25():
 
 
 def read_test_corpus_with_random_and_contriever():
+    raise Exception("dnsabled dataset loading path")
     full_to_subset_path = "data/mappings/full_to_subset_test_random_contriever_in_corpus.pkl"
     subset_to_full_path = "data/mappings/subset_to_full_test_random_contriever_in_corpus.pkl"
     corpus_path = "data/processed/test_corpus_with_random_contriever.json"

@@ -1,96 +1,62 @@
 import os 
-import argparse
+import hydra
 import warnings
+import logging
 from tqdm import tqdm
 from typing import Tuple, Dict, Optional
+from omegaconf import DictConfig
 
 import torch
 from torch.utils.data import DataLoader
 from transformers import PreTrainedTokenizer
 
 from llm import LLM
+from vllm_wrapper import VLLMWrapper
+from transformers import AutoTokenizer
 from utils import *
 from prompt_dataset import PromptDataset
 from datasets import load_dataset
+from hydra.core.hydra_config import HydraConfig
+from omegaconf import OmegaConf
 
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 device = torch.device(f"cuda:0" if torch.cuda.is_available() else "cpu")
 warnings.filterwarnings('ignore')
-SEED=10
 
-info = {
-    "data_path": 'data/test_dataset.json',
-    "random_results_path": "data/10k_random_results_at60.pkl",
-    "adore_search_results_path": "data/adore_search_results_at200.pkl",
-    #"contriever_search_results_path": "data/contriever_search_results_at150.pkl",
-    "contriever_search_results_path": "data/search_results/contriever_IP_test_search_results_at150.pkl",
-}
+# Register custom resolver
 
 
-def parse_arguments():
-    parser = argparse.ArgumentParser(description="Run LLM Generation.")
-    parser.add_argument('--output_dir', type=str, default='data/gen_res', help='Output directory')
-    parser.add_argument('--llm_id', type=str, default='meta-llama/Llama-2-7b-chat-hf', help='LLM model identifier')
-    parser.add_argument('--model_max_length', type=int, help='Maximum input length for the LLM model', default=4096)
-    parser.add_argument('--load_full_corpus', type=str2bool, help='Load the full corpus', default=True)    
-    parser.add_argument('--use_random', type=str2bool, help='Use random irrelevant documents')
-    parser.add_argument('--use_adore', type=str2bool, help="Use the retrieved documents from ADORE", default=False)
-    parser.add_argument('--gold_position', type=int, help='The (0-indexed) position of the gold document in the context')
-    parser.add_argument('--num_documents_in_context', type=int, help='Total number of documents in the context')
-    parser.add_argument('--get_documents_without_answer', type=str2bool, help='Select only documents without the answer (e.g., distracting)', default=True)
-    parser.add_argument('--max_new_tokens', type=int, help='Maximum number of tokens to generate', default=15)
-    parser.add_argument('--batch_size', type=int)
-    parser.add_argument('--save_every', type=int, default=250)
-
-    args = parser.parse_args()
-
-    if args.num_documents_in_context is None:
-        parser.error("'num_documents_in_context' must be specified.")
-    if args.num_documents_in_context <= 0:
-        parser.error("'num_documents_in_context' must be a positive integer.")
-    if args.gold_position is not None and (args.gold_position < 0 or args.gold_position >= args.num_documents_in_context):
-        parser.error("'gold_position' must be within the range of 'num_documents_in_context'.")
-
-    return args
+def validate_config(cfg: DictConfig):
+    """Validate the Hydra configuration."""
+    if cfg.generation.num_documents_in_context is None:
+        raise ValueError("'num_documents_in_context' must be specified.")
+    if cfg.generation.num_documents_in_context <= 0:
+        raise ValueError("'num_documents_in_context' must be a positive integer.")
+    if (cfg.generation.gold_position is not None and 
+        (cfg.generation.gold_position < 0 or cfg.generation.gold_position >= cfg.generation.num_documents_in_context)):
+        raise ValueError("'gold_position' must be within the range of 'num_documents_in_context'.")
 
 
 def load_corpus(
-    args: argparse.Namespace
+    cfg: DictConfig
 ) -> Tuple[List[Dict], Optional[Dict[int, int]]]:
     # Load the corpus
-    if args.load_full_corpus:
-        # corpus = read_corpus_json('data/corpus.json')
-        corpus = load_dataset('json', data_files='data/corpus-widx.jsonl', split='train')
+    if cfg.generation.load_full_corpus:
+        corpus = load_dataset('json', data_files=cfg.data.full_corpus_path, split='train')
         return corpus, None
-
-    if args.use_random:
-        corpus, full_to_subset_idx_map = read_corpus_with_random()
-    elif args.use_adore:
-        corpus, full_to_subset_idx_map = read_corpus_with_adore()
-    else: 
-        # Corpus with documents from Contriever
-        corpus, full_to_subset_idx_map = read_corpus_with_contriever()
-
-    return corpus, full_to_subset_idx_map
-
-
-def load_search_results(args: argparse.Namespace) -> List[Tuple[List[int], List[float]]]:
-    # Decide on search results path based on conditions
-    if args.use_random:
-        search_results_path = info['random_results_path']
-    elif args.use_adore:
-        search_results_path = info['adore_search_results_path']
     else:
-        # Search results from Contriever
-        search_results_path = info['contriever_search_results_path'] 
+        corpus, full_to_subset_idx_map = read_subset_corpus_with_config(cfg)
+        return corpus, full_to_subset_idx_map
 
-    search_results = read_pickle(search_results_path)
+
+def load_search_results(cfg: DictConfig) -> List[Tuple[List[int], List[float]]]:
+    search_results = read_pickle(cfg.corpus.search_results_path)
     return search_results
 
 
 def initialize_dataset_and_loader(
-    args: argparse.Namespace, 
+    cfg: DictConfig, 
     corpus: List[Dict], 
     full_to_subset_idx_map: Optional[Dict[int, int]], 
     search_results: List[Tuple[List[int], List[float]]], 
@@ -98,56 +64,61 @@ def initialize_dataset_and_loader(
 ) -> DataLoader:
     
     prompt_ds = PromptDataset(
-        corpus=corpus, data_path=info['data_path'], 
+        corpus=corpus, data_path=cfg.data.data_path, 
         tokenizer=tokenizer, 
-        max_tokenized_length=args.model_max_length - 2, 
+        max_tokenized_length=cfg.llm.model_max_length - 2, 
         search_results=search_results,
         full_to_subset_idx_map=full_to_subset_idx_map,
         do_normalize_query=True, 
-        num_documents_in_context=args.num_documents_in_context,
-        gold_position=args.gold_position,
-        get_documents_without_answer=args.get_documents_without_answer,
+        num_documents_in_context=cfg.generation.num_documents_in_context,
+        gold_position=cfg.generation.gold_position,
+        get_documents_without_answer=cfg.generation.get_documents_without_answer,
     )
     prompt_dataloader = DataLoader(
         prompt_ds,
-        batch_size=args.batch_size,
+        batch_size=cfg.llm.batch_size,
         shuffle=False,
-        num_workers=8,
-        pin_memory=True,
+        num_workers=4,
+        pin_memory=False,
     )
     return prompt_dataloader
 
 
-def print_info(args: argparse.Namespace):
-    print("INFO:")
-    print(f"DATA: {info['data_path']}")
-    print(f"MODEL: {args.llm_id}")
-    print(f"USE RANDOM IN CONTEXT: {args.use_random}")
-    print(f"USE ADORE: {args.use_adore}")
-    print(f"GOLD POSITION: {args.gold_position}")
-    print(f"NUM DOCUMENTS IN CONTEXT: {args.num_documents_in_context}")
-    print(f"DOCUMENTS WITHOUT ANSWER: {args.get_documents_without_answer}")
-    print(f"BATCH SIZE: {args.batch_size}")
-    print(f"SAVE EVERY: {args.save_every}")
+def print_info(cfg: DictConfig):
+    logger = logging.getLogger(__name__)
+    logger.info("Configuration:")
+    logger.info(f"DATA: {cfg.data.data_path}")
+    logger.info(f"MODEL: {cfg.llm.llm_id}")
+    logger.info(f"USE RANDOM IN CONTEXT: {cfg.generation.use_random}")
+    logger.info(f"GOLD POSITION: {cfg.generation.gold_position}")
+    logger.info(f"NUM DOCUMENTS IN CONTEXT: {cfg.generation.num_documents_in_context}")
+    logger.info(f"DOCUMENTS WITHOUT ANSWER: {cfg.generation.get_documents_without_answer}")
+    logger.info(f"BATCH SIZE: {cfg.llm.batch_size}")
+    logger.info(f"SAVE EVERY: {cfg.generation.save_every}")
 
 
 def generate_and_save(
-    args: argparse.Namespace, 
+    cfg: DictConfig, 
     llm: LLM, 
     prompt_dataloader: DataLoader
 ):
-    # Info from arguments
-    llm_id = args.llm_id
-    num_doc = args.num_documents_in_context
-    save_every = args.save_every
-    gold_pos = args.gold_position
-    retriever_str = "adore" if args.use_adore else "contriever"
-    rand_str = "_rand" if args.use_random else ""
-    answerless_str = "_answerless" if args.get_documents_without_answer else ""
+    logger = logging.getLogger(__name__)
+    
+    # Info from config
+    llm_id = cfg.llm.llm_id
+    num_doc = cfg.generation.num_documents_in_context
+    save_every = cfg.generation.save_every
+    gold_pos = cfg.generation.gold_position
+    # retriever_str = "adore" if cfg.generation.use_adore else "contriever"
+    rand_str = "_rand" if cfg.generation.use_random else ""
+    answerless_str = "_answerless" if cfg.generation.get_documents_without_answer else ""
 
-    # Create the saving directory
-    llm_folder = llm_id.split("/")[1] if '/' in llm_id else llm_id
-    saving_dir = f"{args.output_dir}/{llm_folder}/train/classic/{retriever_str}/{num_doc}_doc"
+    # llm_folder = llm_id.split("/")[1] if '/' in llm_id else llm_id
+    # saving_dir = f"{hydra_output_dir}/numdoc{num_doc}_gold_at{gold_pos}{rand_str}{answerless_str}_info_{idx+1}"
+    # saving_dir = f"{hydra_output_dir}/{llm_folder}/train/classic/{cfg.corpus.retriever_str}/{num_doc}_doc"
+    # saving
+    saving_dir = HydraConfig().get().runtime.output_dir
+    logger.info(f"Output directory: {saving_dir}")
     if not os.path.exists(saving_dir):
         os.makedirs(saving_dir)
 
@@ -158,54 +129,77 @@ def generate_and_save(
     all_info = []  
     for idx, prompt_batch in enumerate(tqdm(prompt_dataloader)):
         prompts = prompt_batch['prompt']
-        generated_output = llm.generate(prompts, max_new_tokens=args.max_new_tokens)
+        # add breakpoint
+        # import pdb; pdb.set_trace()
+        generated_output = llm.generate_batch(prompts, max_new_tokens=cfg.llm.max_new_tokens)
         
         generated_answers = []
         for output in generated_output:
-            start = output.find(answer_string_in_prompt) + len(answer_string_in_prompt)
-            response = output[start:].strip()
+            # start = output.find(answer_string_in_prompt) + len(answer_string_in_prompt)
+            # response = output[start:].strip()
+            response = output.strip()
             generated_answers.append(response)
 
         prompt_batch['generated_answer'] = generated_answers
         all_info.append(prompt_batch)
         
         if (idx + 1) % save_every == 0 or (idx + 1) == len(prompt_dataloader):
-            print(f"Saving at {idx + 1}...")
-            file_name = f"{saving_dir}/numdoc{num_doc}_gold_at{gold_pos}{rand_str}{answerless_str}_info_{idx+1}.pkl"
+            logger.info(f"Saving at batch {idx + 1}...")
+            file_name = f"{saving_dir}/gold_at{gold_pos}{rand_str}{answerless_str}_info_{idx+1}.pkl"
             write_pickle(all_info, file_name)
+            logger.info(f"Saved to {file_name}")
             all_info = []
 
 
-def main():
-    args = parse_arguments()
+@hydra.main(version_base=None, config_path="../conf", config_name="generation_config")
+def main(cfg: DictConfig) -> None:
+    # Setup logging
+    logger = logging.getLogger(__name__)
+    
+    validate_config(cfg)
+    
+    # Set seed
+    seed_everything(cfg.seed)
 
-    print("Loading LLM...")
-    llm_id = args.llm_id
-    llm = LLM(
-        llm_id, device, quantization_bits=4, 
-        model_max_length=args.model_max_length
+    # import pdb; pdb.set_trace()
+
+    logger.info("Loading LLM...")
+    llm_id = cfg.llm.llm_id
+    # llm = LLM(
+    #     llm_id, device, quantization_bits=4, 
+    #     model_max_length=cfg.llm.model_max_length
+    # )
+    llm = VLLMWrapper(
+        llm_id, device, 
+        model_max_length=cfg.llm.model_max_length, 
+        tensor_parallel_size=cfg.llm.tensor_parallel_size, 
+        quantization_bits=cfg.llm.quantization_bits, 
+        gpu_memory_utilization=cfg.llm.gpu_memory_utilization
     )
-    tokenizer = llm.tokenizer
-    print("LLM loaded")
+    tokenizer = AutoTokenizer.from_pretrained(
+        llm_id, 
+        padding_side="left", 
+        truncation_side="left", 
+        model_max_length=cfg.llm.model_max_length
+    )
+    logger.info("LLM loaded")
 
+    logger.info("Loading corpus and search results...")
+    corpus, full_to_subset_idx_map = load_corpus(cfg)
+    search_results = load_search_results(cfg)
+    logger.info("Corpus and search results loaded")
 
-    print("Loading corpus and search results...")
-    corpus, full_to_subset_idx_map = load_corpus(args)
-    search_results = load_search_results(args)
-    print("Corpus and search results loaded")
-
-
-    print("Loading prompt dataset...")
+    logger.info("Loading prompt dataset...")
     prompt_dataloader = initialize_dataset_and_loader(
-        args, corpus, full_to_subset_idx_map, search_results, tokenizer
+        cfg, corpus, full_to_subset_idx_map, search_results, tokenizer
     )
-    print("Prompt dataset loaded")
+    logger.info("Prompt dataset loaded")
 
-    print_info(args)
-    generate_and_save(args, llm, prompt_dataloader)
+    print_info(cfg)
+    generate_and_save(cfg, llm, prompt_dataloader)
 
 
 
 if __name__ == "__main__":
-    seed_everything(SEED)
+    OmegaConf.register_new_resolver("sanitize_path", lambda x: x.split("/")[1] if "/" in x else x)
     main()

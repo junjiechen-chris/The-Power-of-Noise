@@ -1,0 +1,5 @@
+defaults:
+  - corpus: contriever
+
+# Global settings
+seed: 10
