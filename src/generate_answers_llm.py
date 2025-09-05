@@ -170,13 +170,18 @@ def main(cfg: DictConfig) -> None:
     #     llm_id, device, quantization_bits=4, 
     #     model_max_length=cfg.llm.model_max_length
     # )
-    llm = VLLMWrapper(
-        llm_id, device, 
-        model_max_length=cfg.llm.model_max_length, 
-        tensor_parallel_size=cfg.llm.tensor_parallel_size, 
-        quantization_bits=cfg.llm.quantization_bits, 
-        gpu_memory_utilization=cfg.llm.gpu_memory_utilization
-    )
+    if cfg.llm.debug: 
+        llm = None
+        logger.debug("LLM not loaded")
+    else:
+        llm = VLLMWrapper(
+            llm_id, device, 
+            model_max_length=cfg.llm.model_max_length, 
+            tensor_parallel_size=cfg.llm.tensor_parallel_size, 
+            quantization_bits=cfg.llm.quantization_bits, 
+            gpu_memory_utilization=cfg.llm.gpu_memory_utilization,
+            eager_mode=cfg.llm.eager_mode
+        )
     tokenizer = AutoTokenizer.from_pretrained(
         llm_id, 
         padding_side="left", 

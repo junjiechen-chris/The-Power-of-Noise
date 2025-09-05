@@ -16,6 +16,8 @@ llm:
   tensor_parallel_size: 1
   quantization_bits: null
   gpu_memory_utilization: 0.8
+  eager_mode: false
+  debug: false
 
 # Generation settings
 generation:

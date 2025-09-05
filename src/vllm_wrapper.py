@@ -22,7 +22,8 @@ class VLLMWrapper:
         stop_list: Optional[List[str]] = None, 
         model_max_length: int = 4096,
         tensor_parallel_size: int = 1,
-        gpu_memory_utilization: float = 0.9
+        gpu_memory_utilization: float = 0.9,
+        eager_mode: bool = False,
     ):
         self.model_id = model_id
         self.device = device
@@ -48,6 +49,7 @@ class VLLMWrapper:
             max_model_len=model_max_length,
             quantization=quantization,
             trust_remote_code=True,
+            enforce_eager=eager_mode
         )
         
     def generate(

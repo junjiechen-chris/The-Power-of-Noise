@@ -24,11 +24,13 @@ class QueryDataset(Dataset):
         self, 
         data_path: str, 
         model_name: str,
+        tokenizer: AutoTokenizer = None,
         do_normalize_query: bool = False,
     ):
         super().__init__()
         self.data_path = data_path
         self.model_name = model_name
+        self.tokenizer = tokenizer
         self.do_normalize_query = do_normalize_query
         self._load_data()
 
@@ -66,6 +68,28 @@ class QueryDataset(Dataset):
 
 
     def build_qa_prompt(self, query: str) -> str:
+        # Try to use modern chat template if available
+        example_q1 = "where are the winter olympics and when do they start"
+        example_a1 = "Pyeongchang County , South Korea"
+        if self.tokenizer and hasattr(self.tokenizer, 'apply_chat_template') and self.tokenizer.chat_template:
+            try:
+                messages = [
+                    {"role": "system", "content": "You are given a question and you MUST respond with a short answer (max 5 tokens) based on your internal knowledge. If you do not know the answer, please respond with NO-RES."},
+                    {"role": "user", "content": f"This is an example to show the QA format.\n\nDocuments:\n<documents>\n\nQuestion: {example_q1}"},
+                    {"role": "assistant", "content": f"{example_a1}"},
+                    {"role": "user", "content": f"Question: {query}"}
+                ]
+                prompt = self.tokenizer.apply_chat_template(
+                    messages, 
+                    tokenize=False, 
+                    add_generation_prompt=True
+                )
+                return prompt
+            except Exception:
+                # Fall back to manual formatting if chat template fails
+                pass
+        
+        # Fallback: Use original manual formatting
         task_instruction = "You are given a question and you MUST respond with a short answer (max 5 tokens) based on your internal knowledge. If you do not know the answer, please respond with NO-RES."
         prompt = f"""{task_instruction}\nQuestion: {query}\nAnswer:"""
         
@@ -212,6 +236,8 @@ class PromptDataset(Dataset):
             gold_document_idx = str(example['idx_gold_in_corpus'])
             answers = example['answers']
 
+            # import pdb; pdb.set_trace()
+
             formatted_documents, document_indices = self.prepare_documents_for_prompt(
                 idx, gold_document_idx, answers
             )
@@ -223,11 +249,12 @@ class PromptDataset(Dataset):
                 query = normalize_text.normalize(query)
             prompt = self.build_qa_prompt(query, documents_str)
 
+            # !TODO: This skips examples. Which should be avoided as far as possible.
+            # !TODO: now, we disable the token length limit
             # Check if the prompt exceeds 'max_tokenized_length'
             tokens = self.tokenizer.tokenize(prompt)
             tokens_len = len(tokens)
 
-            # !TODO: This skips examples. Which should be avoided as far as possible.
             if tokens_len >= self.max_tokenized_length:
                 self.excluded_samples_ids.append((idx, example_id))
                 self.logger.info("Skipping example {} due to prompt length.".format((idx, example_id)))
@@ -457,6 +484,28 @@ class PromptDataset(Dataset):
 
 
     def build_qa_prompt(self, query: str, documents_str: str) -> str:
+        # Try to use modern chat template if available
+        example_q1 = "where are the winter olympics and when do they start"
+        example_a1 = "Pyeongchang County , South Korea"
+        if hasattr(self.tokenizer, 'apply_chat_template') and self.tokenizer.chat_template:
+            try:
+                messages = [
+                    {"role": "system", "content": "You are given a question and you MUST respond by EXTRACTING the answer (max 5 tokens) from one of the provided documents. If none of the documents contain the answer, respond with NO-RES."},
+                    {"role": "user", "content": f"This is an example to show the QA format.\n\nDocuments:\n<documents>\n\nQuestion: {example_q1}"},
+                    {"role": "assistant", "content": f"{example_a1}"},
+                    {"role": "user", "content": f"Documents:\n{documents_str}\n\nQuestion: {query}"}
+                ]
+                prompt = self.tokenizer.apply_chat_template(
+                    messages, 
+                    tokenize=False, 
+                    add_generation_prompt=True
+                )
+                return prompt
+            except Exception:
+                # Fall back to manual formatting if chat template fails
+                pass
+        
+        # Fallback: Use original manual formatting
         task_instruction = "You are given a question and you MUST respond by EXTRACTING the answer (max 5 tokens) from one of the provided documents. If none of the documents contain the answer, respond with NO-RES."
         prompt = f"""{task_instruction}\nDocuments:\n{documents_str}\nQuestion: {query}\nAnswer:"""
 
