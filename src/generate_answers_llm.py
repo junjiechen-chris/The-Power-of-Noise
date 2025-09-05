@@ -19,6 +19,7 @@ from datasets import load_dataset
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import OmegaConf
 
+from dotenv import load_dotenv
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 device = torch.device(f"cuda:0" if torch.cuda.is_available() else "cpu")
@@ -201,5 +202,6 @@ def main(cfg: DictConfig) -> None:
 
 
 if __name__ == "__main__":
+    load_dotenv()
     OmegaConf.register_new_resolver("sanitize_path", lambda x: x.split("/")[1] if "/" in x else x)
     main()
