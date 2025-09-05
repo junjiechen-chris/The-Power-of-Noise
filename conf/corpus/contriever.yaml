@@ -1,7 +1,7 @@
 # @package _global_
 corpus:
-  full_to_subset_path: "data/mappings/full_to_subset_contriever_at150_in_corpus.pkl"
-  subset_to_full_path: "data/mappings/subset_to_full_contriever_at150_in_corpus.pkl"
-  corpus_path: "data/processed/contriever_IP_150_downsized.jsonl"
-  search_results_path: "data/search_results/contriever_IP_test_search_results_at150.pkl"
+  full_to_subset_path: "data/wiki_contriever_test/full_to_subset_contriever_at150_in_corpus.pkl"
+  subset_to_full_path: "data/wiki_contriever_test/subset_to_full_contriever_at150_in_corpus.pkl"
+  corpus_path: "data/wiki_contriever_test/contriever_IP_150_downsized.jsonl"
+  search_results_path: "data/wiki_contriever_test/contriever_IP_test_search_results_at150.pkl"
   retriever_str: "contriever"
