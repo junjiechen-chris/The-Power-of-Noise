@@ -148,8 +148,10 @@ def main():
                 continue
                 
             try:
-                s3_prefix, local_path = [x.strip() for x in line.split(',', 1)]
-                
+                enabled, s3_prefix, local_path = [x.strip() for x in line.split(',', 2)]
+                enabled = enabled == "1"
+                if not enabled: continue
+
                 if args.upload:
                     print(f"\nProcessing line {line_num}: {local_path} -> {s3_prefix}")
                     upload_directory(s3_client, args.bucket, local_path, s3_prefix, args.exclude)
