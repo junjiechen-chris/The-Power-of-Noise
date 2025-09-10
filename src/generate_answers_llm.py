@@ -132,8 +132,10 @@ def generate_and_save(
         prompts = prompt_batch['prompt']
         # add breakpoint
         # import pdb; pdb.set_trace()
-        generated_output = llm.generate_batch(prompts, max_new_tokens=cfg.llm.max_new_tokens)
-        
+        generated_output = llm.generate_batch(prompts, max_new_tokens=cfg.llm.max_new_tokens,
+                                              top_k = cfg.llm.top_k, top_p = cfg.llm.top_p,
+                                              presence_penalty=cfg.llm.presence_penalty)
+
         generated_answers = []
         for output in generated_output:
             # start = output.find(answer_string_in_prompt) + len(answer_string_in_prompt)

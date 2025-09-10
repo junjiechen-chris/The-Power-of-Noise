@@ -97,7 +97,10 @@ class VLLMWrapper:
         prompts: List[str], 
         max_new_tokens: int = 15,
         temperature: float = 0.0,
-        top_p: float = 1.0
+        top_p: float = 1.0,
+        top_k: int = 500,
+        repetition_penalty: float = 1.1,
+        presence_penalty: float = 0.0
     ) -> List[str]:
         """
         Generates text for multiple prompts in batch (much faster than sequential).
@@ -114,9 +117,11 @@ class VLLMWrapper:
         sampling_params = SamplingParams(
             temperature=temperature,
             top_p=top_p,
+            top_k=top_k,
             max_tokens=max_new_tokens,
             stop=self.stop_list,
-            repetition_penalty=1.1
+            repetition_penalty=repetition_penalty,
+            presence_penalty=presence_penalty,
         )
         
         outputs = self.llm.generate(prompts, sampling_params)
