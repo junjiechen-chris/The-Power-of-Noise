@@ -1,10 +1,10 @@
 llm_id: 'meta-llama/Llama-3.1-8B-Instruct'
-model_max_length: 19200
+model_max_length: 12800
 max_new_tokens: 256
 batch_size: 1024
 tensor_parallel_size: 1
 quantization_bits: null
-gpu_memory_utilization: 0.8
+gpu_memory_utilization: 0.9
 eager_mode: false
 debug: false
 parse_reasoning: false

@@ -1,3 +1,5 @@
-1,the-power-of-noise-s3/data/wiki_contriever_test,data/wiki_contriever_test
+0,the-power-of-noise-s3/data/wiki_contriever_test,data/wiki_contriever_test
 1,the-power-of-noise-s3/gen_res/Llama-3.1-8B-Instruct,gen_res/Llama-3.1-8B-Instruct
-1,the-power-of-noise-s3/gen_res/Qwen3-8B,gen_res/Qwen3-8B
+0,the-power-of-noise-s3/gen_res/Qwen3-8B,gen_res/Qwen3-8B
+1,the-power-of-noise-s3/sweeps,sweeps/
+1,the-power-of-noise-s3/output,output/
