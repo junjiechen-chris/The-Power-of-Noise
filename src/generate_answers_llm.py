@@ -138,6 +138,7 @@ def generate_and_save(
         for output in generated_output:
             # start = output.find(answer_string_in_prompt) + len(answer_string_in_prompt)
             # response = output[start:].strip()
+            # import pdb; pdb.set_trace()
             response = output.strip()
             generated_answers.append(response)
 
@@ -158,6 +159,7 @@ def main(cfg: DictConfig) -> None:
     logger = logging.getLogger(__name__)
     
     validate_config(cfg)
+    logger.info(f"validated configuration {cfg}")
     
     # Set seed
     seed_everything(cfg.seed)
@@ -180,7 +182,8 @@ def main(cfg: DictConfig) -> None:
             tensor_parallel_size=cfg.llm.tensor_parallel_size, 
             quantization_bits=cfg.llm.quantization_bits, 
             gpu_memory_utilization=cfg.llm.gpu_memory_utilization,
-            eager_mode=cfg.llm.eager_mode
+            eager_mode=cfg.llm.eager_mode,
+            parse_reasoning=cfg.llm.parse_reasoning
         )
     tokenizer = AutoTokenizer.from_pretrained(
         llm_id, 

@@ -1,6 +1,7 @@
 import torch
+from transformers import AutoTokenizer
 from vllm import LLM as vLLM_Engine, SamplingParams
-from typing import List, Optional
+from typing import List, Optional, Union, Any
 
 class VLLMWrapper:
     """
@@ -24,6 +25,7 @@ class VLLMWrapper:
         tensor_parallel_size: int = 1,
         gpu_memory_utilization: float = 0.9,
         eager_mode: bool = False,
+        parse_reasoning:bool = False,
     ):
         self.model_id = model_id
         self.device = device
@@ -49,9 +51,17 @@ class VLLMWrapper:
             max_model_len=model_max_length,
             quantization=quantization,
             trust_remote_code=True,
-            enforce_eager=eager_mode
+            enforce_eager=eager_mode,
         )
-        
+        self.parse_reasoning = parse_reasoning
+        if parse_reasoning:
+            from vllm.reasoning import Qwen3ReasoningParser
+            if model_id.startswith('Qwen/Qwen3'):
+                tokenizer = AutoTokenizer.from_pretrained(model_id)
+                self.reasoning_parser = Qwen3ReasoningParser(tokenizer)
+            else:
+                raise NotImplementedError(f"Reasoning parsing not implemented for model {model_id}")
+
     def generate(
         self, 
         prompt: str, 
@@ -110,4 +120,13 @@ class VLLMWrapper:
         )
         
         outputs = self.llm.generate(prompts, sampling_params)
-        return [output.outputs[0].text for output in outputs]
+        if self.parse_reasoning:
+            # Parse reasoning steps if enabled
+            parsed_outputs = []
+            for output in outputs:
+                text = output.outputs[0].text
+                reasoning_trace, answer = self.reasoning_parser.extract_reasoning_content(text, None)
+                parsed_outputs.append(answer)
+            return parsed_outputs
+        else:
+            return [output.outputs[0].text for output in outputs]

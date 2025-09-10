@@ -1,0 +1,6 @@
+load_full_corpus: false 
+use_random: false
+gold_position: Null 
+num_documents_in_context: 8  # Must be specified
+get_documents_without_answer: true
+save_every: 250

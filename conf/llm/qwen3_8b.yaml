@@ -1,0 +1,10 @@
+llm_id: 'Qwen/Qwen3-8B'
+model_max_length: 25600
+max_new_tokens: 1024 
+batch_size: 256
+tensor_parallel_size: 1
+quantization_bits: null
+gpu_memory_utilization: 0.8
+eager_mode: false
+debug: false
+parse_reasoning: true 

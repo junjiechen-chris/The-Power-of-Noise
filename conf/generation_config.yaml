@@ -1,32 +1,13 @@
 defaults:
+  - llm: llama3_3b
   - corpus: contriever
+  - generation: ctx2_gold0_wAnswer
   - _self_
 
 # Data paths
 data:
   data_path: 'data/test_dataset.json'
   full_corpus_path: 'data/corpus-widx.jsonl'
-
-# LLM configuration
-llm:
-  llm_id: 'meta-llama/Llama-2-7b-chat-hf'
-  model_max_length: 4096
-  max_new_tokens: 15
-  batch_size: 256
-  tensor_parallel_size: 1
-  quantization_bits: null
-  gpu_memory_utilization: 0.8
-  eager_mode: false
-  debug: false
-
-# Generation settings
-generation:
-  load_full_corpus: false 
-  use_random: false
-  gold_position: 0
-  num_documents_in_context: 2  # Must be specified
-  get_documents_without_answer: true
-  save_every: 250
 
 # Global settings
 seed: 10
