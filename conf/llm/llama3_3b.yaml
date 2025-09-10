@@ -8,3 +8,7 @@ gpu_memory_utilization: 0.8
 eager_mode: false
 debug: false
 parse_reasoning: false
+top_k: -1
+top_p: 0.95
+temperature: 0.0
+presence_penalty: 0.0
