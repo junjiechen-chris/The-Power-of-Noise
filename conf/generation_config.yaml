@@ -35,4 +35,4 @@ hydra:
   run:
     dir: ./gen_res/${sanitize_path:${llm.llm_id}}/${corpus.retriever_str}/numdoc_${generation.num_documents_in_context}_answerless_${generation.get_documents_without_answer}/${now:%Y-%m-%d-%H}
   sweep:
-    dir: ./gen_res/sweeps
+    dir: ./sweeps/${now:%Y-%m-%d-%H-%M}/${sanitize_path:${llm.llm_id}}/${corpus.retriever_str}/numdoc_${generation.num_documents_in_context}_answerless_${generation.get_documents_without_answer}
