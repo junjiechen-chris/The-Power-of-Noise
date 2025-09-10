@@ -1,5 +1,5 @@
 llm_id: 'Qwen/Qwen3-1.7B'
-model_max_length: 25600
+model_max_length: 19200
 max_new_tokens: 1024
 batch_size: 256
 tensor_parallel_size: 1
