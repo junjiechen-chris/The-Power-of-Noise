@@ -3,7 +3,7 @@ import hydra
 import warnings
 import logging
 from tqdm import tqdm
-from typing import Tuple, Dict, Optional
+from typing import Tuple, Dict, Optional, Union, List
 from omegaconf import DictConfig
 
 import torch
@@ -12,6 +12,7 @@ from transformers import PreTrainedTokenizer
 
 from llm import LLM
 from vllm_wrapper import VLLMWrapper
+from vllm_server_client import VLLMServerClient
 from transformers import AutoTokenizer
 from utils import *
 from prompt_dataset import PromptDataset
@@ -100,7 +101,7 @@ def print_info(cfg: DictConfig):
 
 def generate_and_save(
     cfg: DictConfig, 
-    llm: LLM, 
+    llm: Union[VLLMWrapper, VLLMServerClient],
     prompt_dataloader: DataLoader
 ):
     logger = logging.getLogger(__name__)
@@ -138,9 +139,6 @@ def generate_and_save(
 
         generated_answers = []
         for output in generated_output:
-            # start = output.find(answer_string_in_prompt) + len(answer_string_in_prompt)
-            # response = output[start:].strip()
-            # import pdb; pdb.set_trace()
             response = output.strip()
             generated_answers.append(response)
 
@@ -178,15 +176,21 @@ def main(cfg: DictConfig) -> None:
         llm = None
         logger.debug("LLM not loaded")
     else:
-        llm = VLLMWrapper(
-            llm_id, device, 
-            model_max_length=cfg.llm.model_max_length, 
-            tensor_parallel_size=cfg.llm.tensor_parallel_size, 
-            quantization_bits=cfg.llm.quantization_bits, 
-            gpu_memory_utilization=cfg.llm.gpu_memory_utilization,
-            eager_mode=cfg.llm.eager_mode,
-            parse_reasoning=cfg.llm.parse_reasoning
-        )
+        if getattr(cfg.llm, "mode", "offline") == "server":
+            llm = VLLMServerClient(
+                server_url=cfg.llm.server_url,
+                served_model_name=llm_id,
+            )
+        else:
+            llm = VLLMWrapper(
+                llm_id, device,
+                model_max_length=cfg.llm.model_max_length,
+                tensor_parallel_size=cfg.llm.tensor_parallel_size,
+                quantization_bits=cfg.llm.quantization_bits,
+                gpu_memory_utilization=cfg.llm.gpu_memory_utilization,
+                eager_mode=cfg.llm.eager_mode,
+                parse_reasoning=cfg.llm.parse_reasoning,
+            )
     tokenizer = AutoTokenizer.from_pretrained(
         llm_id, 
         padding_side="left", 

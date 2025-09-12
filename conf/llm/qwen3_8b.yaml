@@ -12,3 +12,5 @@ top_k: 20
 top_p: 0.95
 temperature: 0.6
 presence_penalty: 1.5
+mode: offline  # offline|server
+server_url: http://localhost:8000/v1

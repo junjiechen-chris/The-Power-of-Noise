@@ -43,18 +43,17 @@ class VLLMWrapper:
         else:
             raise Exception("Only 4-bit and 8-bit quantization are supported")
 
-            
-        # Initialize vLLM engine
         self.llm = vLLM_Engine(
             model=model_id,
             tensor_parallel_size=tensor_parallel_size,
             gpu_memory_utilization=gpu_memory_utilization,
-            dtype=torch.bfloat16,
-            max_model_len=model_max_length,
-            quantization=quantization,
-            trust_remote_code=True,
-            enforce_eager=eager_mode,
-        )
+                dtype=torch.bfloat16,
+                max_model_len=model_max_length,
+                quantization=quantization,
+                trust_remote_code=True,
+                enforce_eager=eager_mode,
+                data_parallel_size=torch.cuda.device_count() // tensor_parallel_size if torch.cuda.is_available() else 1,
+            )
         self.parse_reasoning = parse_reasoning
         if parse_reasoning:
             from vllm.reasoning import Qwen3ReasoningParser

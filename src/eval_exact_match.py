@@ -155,7 +155,6 @@ def expand_files(file_args: List[str]) -> List[str]:
 
 def main() -> None:
     args = parse_args()
-
     if args.pred_files:
         files = expand_files(args.pred_files)
     else:
@@ -186,4 +185,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
