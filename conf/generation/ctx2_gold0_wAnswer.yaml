@@ -4,3 +4,4 @@ gold_position: 0
 num_documents_in_context: 2  # Must be specified
 get_documents_without_answer: true
 save_every: 250
+randomize_gold_position: false

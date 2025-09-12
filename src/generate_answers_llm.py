@@ -75,6 +75,7 @@ def initialize_dataset_and_loader(
         num_documents_in_context=cfg.generation.num_documents_in_context,
         gold_position=cfg.generation.gold_position,
         get_documents_without_answer=cfg.generation.get_documents_without_answer,
+        randomize_gold_position=cfg.generation.randomize_gold_position,
     )
     prompt_dataloader = DataLoader(
         prompt_ds,

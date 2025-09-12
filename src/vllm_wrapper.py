@@ -40,6 +40,8 @@ class VLLMWrapper:
             quantization = "bitsandbytes"  # vLLM supports AWQ for 4-bit
         elif quantization_bits == 8:
             quantization = "fp8"  # vLLM supports FP8 for 8-bit
+        elif quantization_bits is None:
+            quantization = None
         else:
             raise Exception("Only 4-bit and 8-bit quantization are supported")
 
@@ -53,6 +55,7 @@ class VLLMWrapper:
                 trust_remote_code=True,
                 enforce_eager=eager_mode,
                 data_parallel_size=torch.cuda.device_count() // tensor_parallel_size if torch.cuda.is_available() else 1,
+                enable_prefix_caching=True,
             )
         self.parse_reasoning = parse_reasoning
         if parse_reasoning:
