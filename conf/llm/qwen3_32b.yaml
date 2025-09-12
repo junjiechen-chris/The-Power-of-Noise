@@ -1,0 +1,14 @@
+llm_id: 'Qwen/Qwen3-32B'
+model_max_length: 12800
+max_new_tokens: 1024 
+batch_size: 1024
+tensor_parallel_size: 1
+quantization_bits: 8
+gpu_memory_utilization: 0.9
+eager_mode: false
+debug: false
+parse_reasoning: true
+top_k: 20
+top_p: 0.95
+temperature: 0.6
+presence_penalty: 1.5

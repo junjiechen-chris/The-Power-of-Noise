@@ -39,8 +39,10 @@ class VLLMWrapper:
         if quantization_bits == 4:
             quantization = "bitsandbytes"  # vLLM supports AWQ for 4-bit
         elif quantization_bits == 8:
-            raise Exception("fp8 mode not supported")
             quantization = "fp8"  # vLLM supports FP8 for 8-bit
+        else:
+            raise Exception("Only 4-bit and 8-bit quantization are supported")
+
             
         # Initialize vLLM engine
         self.llm = vLLM_Engine(
