@@ -77,12 +77,20 @@ def initialize_dataset_and_loader(
         get_documents_without_answer=cfg.generation.get_documents_without_answer,
         randomize_gold_position=cfg.generation.randomize_gold_position,
     )
+    def custom_collate_fn(batch):
+        """Custom collate function to handle string data properly"""
+        collated = {}
+        for key in batch[0].keys():
+            collated[key] = [item[key] for item in batch]
+        return collated
+    
     prompt_dataloader = DataLoader(
         prompt_ds,
         batch_size=cfg.llm.batch_size,
         shuffle=False,
         num_workers=4,
         pin_memory=False,
+        collate_fn=custom_collate_fn,
     )
     return prompt_dataloader
 

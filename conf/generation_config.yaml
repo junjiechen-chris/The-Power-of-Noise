@@ -15,8 +15,8 @@ seed: 10
 
 hydra:
   run:
-    dir: ./output/${now:%Y-%m-%d-%H-%M}/${sanitize_path:${llm.llm_id}}-${corpus.retriever_str}/numdoc_${generation.num_documents_in_context}_answerless_${generation.get_documents_without_answer}_goldIdx_${generation.gold_position}/
+    dir: ./output/${now:%Y-%m-%d-%H-%M}/${sanitize_path:${llm.llm_id}}-${corpus.retriever_str}/numdoc_${generation.num_documents_in_context}_answerless_${generation.get_documents_without_answer}_goldIdx_${generation.gold_position}_randomGold_${generation.randomize_gold_position}/
   sweep:
-    dir: ./sweeps/${now:%Y-%m-%d-%H-%M}/${sanitize_path:${llm.llm_id}}-${corpus.retriever_str}/numdoc_${generation.num_documents_in_context}_answerless_${generation.get_documents_without_answer}_goldIdx_${generation.gold_position}/
+    dir: ./sweeps/${now:%Y-%m-%d-%H-%M}/${sanitize_path:${llm.llm_id}}-${corpus.retriever_str}/numdoc_${generation.num_documents_in_context}_answerless_${generation.get_documents_without_answer}_goldIdx_${generation.gold_position}_randomGold_${generation.randomize_gold_position}/
   launcher:
     n_jobs: 1

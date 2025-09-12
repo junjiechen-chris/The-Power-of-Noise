@@ -158,7 +158,7 @@ class PromptDataset(Dataset):
         full_to_subset_idx_map: Dict[int, int] = None,
         do_normalize_query: bool = False,
         num_documents_in_context: int = 5,
-        gold_position: int = None,
+        gold_position: Optional[int] = None,
         randomize_gold_position: bool = False,
         get_documents_without_answer: bool = False,
     ):
