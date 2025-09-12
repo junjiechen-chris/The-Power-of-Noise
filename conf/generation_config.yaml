@@ -3,7 +3,6 @@ defaults:
   - corpus: contriever
   - generation: ctx2_gold0_wAnswer
   - _self_
-  - override hydra/launcher: joblib
 
 # Data paths
 data:
