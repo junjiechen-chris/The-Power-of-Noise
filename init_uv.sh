@@ -5,8 +5,8 @@ echo "Install UV virtual environment in $HOME/.uv-venvs/$(basename "$PWD") ?"
 while true; do
     read -p "Install UV virtual environment in $HOME/.uv-venvs/$(basename "$PWD") ? " yn
     case $yn in
-        [Yy]* ) UV_PROJECT_ENVIRONMENT="$HOME/.uv-venvs/$(basename "$PWD")"; break;;
-        [Nn]* ) UV_PROJECT_ENVIRONMENT=""; break;;
+        [Yy]* ) export UV_PROJECT_ENVIRONMENT="$HOME/.uv-venvs/$(basename "$PWD")"; break;;
+        [Nn]* ) export UV_PROJECT_ENVIRONMENT=""; break;;
         * ) echo "Please answer yes or no.";;
     esac
 done
