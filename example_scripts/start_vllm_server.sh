@@ -10,6 +10,7 @@ PORT=${2:-8000}
 TP_SIZE=${TP_SIZE:-1}
 GPU_UTIL=${GPU_UTIL:-0.8}
 MAX_MODEL_LEN=${MAX_MODEL_LEN:-8192}
+DP_SIZE=${DP_SIZE:-1}
 
 python -m vllm.entrypoints.openai.api_server \
   --model "$MODEL_ID" \
