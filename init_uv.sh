@@ -11,5 +11,7 @@ while true; do
     esac
 done
 
+TZ='Asia/Tokyo'; export TZ
+
 uv sync
 uv run ipython kernel install --user --name=tpon
