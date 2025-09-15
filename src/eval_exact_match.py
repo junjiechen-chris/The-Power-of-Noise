@@ -156,8 +156,10 @@ def expand_files(file_args: List[str]) -> List[str]:
 def main() -> None:
     args = parse_args()
     if args.pred_files:
+        print("reading from file:", args.pred_files)
         files = expand_files(args.pred_files)
     else:
+        print("reading from directory:", args.pred_dir)
         files = find_result_files(args.pred_dir, pattern=args.pattern)
 
     if not files:

@@ -148,7 +148,11 @@ def generate_and_save(
 
         generated_answers = []
         for output in generated_output:
-            response = output.strip()
+            try:
+                response = output.strip()
+            except:
+                response = ""
+                logger.warning(f"Failed to decode output: {output}")
             generated_answers.append(response)
 
         prompt_batch['generated_answer'] = generated_answers
